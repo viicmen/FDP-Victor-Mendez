@@ -1,8 +1,12 @@
+#                                
+# FUNCTIONS TO CHECK WETHER EVERY MOTIF ASSOCIATED TO A DBD ARE SIMILAR
+#
 import os
 
 def ReadTfToM(input_file):
 '''
-Reads a file where each line contains a transcription factor and its associated motifs. Returns a dictionary mapping each transcription factor to a list of its motifs.
+Reads a file where each line contains a transcription factor and its associated motifs. 
+Returns a dictionary mapping each transcription factor to a list of its motifs.
 '''
     with open(input_file, 'r') as f:
 
@@ -19,7 +23,8 @@ Reads a file where each line contains a transcription factor and its associated 
 
 def CheckQvalue(pwms_dir):
 '''
-Concatenates all .meme files in a directory and runs Tomtom to compare motifs. If any comparison has a q-value above 0.001, it returns False. Otherwise, it returns the name of the longest PWM file.
+Concatenates all .meme files in a directory and runs Tomtom to compare motifs. 
+If any comparison has a q-value above 0.001, it returns False. Otherwise, it returns the name of the longest PWM file.
 '''
     os.system('cat ' + pwms_dir + '*.meme > multipwm.meme')
     os.system('tomtom multipwm.meme multipwm.meme -thresh 1.0 -verbosity 1')
@@ -48,7 +53,9 @@ Concatenates all .meme files in a directory and runs Tomtom to compare motifs. I
 
 def CheckMotifs(input_file, output_file, pwms_dir, dummy_dir):
 '''
-For each transcription factor and its associated motifs, checks motif similarity using Tomtom. If motifs are similar (based on q-value), writes the transcription factor and selected motif to an output file. Uses a temporary directory to run the checks.
+For each transcription factor and its associated motifs, checks motif similarity using Tomtom. 
+If motifs are similar (based on q-value), writes the transcription factor and selected motif to an output file. 
+Uses a temporary directory to run the checks.
 '''
     tfs = ReadTfToM(input_file)
 
