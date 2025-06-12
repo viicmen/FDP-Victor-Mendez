@@ -11,7 +11,7 @@ all_sequences.fasta is similar to "filtered_sequences.fasta" but for the redunda
 mmseqs createdb modcre_pdbs.fasta pdb_fasta_db
 mmseqs createindex pdb_fasta_db tmp
 
-for db in 'JASPAR' 'cis-bp' 'hocomoco';
+for db in 'Cisbp' 'Jaspar' 'Hocomoco';
 do
 
 mmseqs createdb $db/filtered_sequences.fasta $db/filtered_fasta_db
