@@ -5,7 +5,7 @@
 import torch
 import random
 import json
-from GenerateTraininginputs import CreateLogo, TensorToMeme
+from GenerateTraininginputs import CreateLogo, TensorToMeme, JSDScore
 
 def CreateIDPRanges(file_path, out_json):
 '''
@@ -64,7 +64,7 @@ This output is also saved as a JSON file.
         
     return new
 
-def GetPMW_Test(pwm_id):
+def GetPMW_Test(pwm_id, pad=True):
 '''
 Similar to GetPWM from Training_Validation.py
 '''
@@ -81,13 +81,16 @@ Similar to GetPWM from Training_Validation.py
     if lines[-1][0] == 'U': lines = lines[:-1]
     probs = [[float(p) for p in l.strip().split()] for l in lines[i+1:]]
 
-    right = (30-len(probs))//2
-    left = 30-len(probs)-right
+    if pad:
+        right = (30-len(probs))//2
+        left = 30-len(probs)-right
+    
+        right = [[0.25 for _ in range(4)] for _ in range(right)]
+        left = [[0.25 for _ in range(4)] for _ in range(left)]
+    
+        probs = left + probs + right
 
-    right = [[0.25 for _ in range(4)] for _ in range(right)]
-    left = [[0.25 for _ in range(4)] for _ in range(left)]
-
-    probs = left + probs + right
+    return probs
 
 def CreateInputs_Test(pwms, idp):
 '''
@@ -112,7 +115,7 @@ Similar to CreateOneHot from Training_Validation.py
     elif family == 'Zn_clus': one_hot[0][6] = 1
     return one_hot
 
-def PredictPWM(model_path, motif_id, nn_idp, nn_json, modcre_idp, modcre_json, family):
+def PredictPWM(model_path, motif_id, nn_idp, nn_json, modcre_idp, modcre_json, family, real_path):
 '''
 Loads a pre-trained model, reads input PWM IDs and identity ranges from two JSON files, and constructs the corresponding input tensors. 
 It also encodes the family name as a one-hot vector. 
@@ -130,8 +133,13 @@ These inputs are passed into the model to predict a PWM, which is then saved bot
     onehot = CreateOneHot(family)
 
     pred = model(input_tensor_nn, input_tensor_modcre, onehot)
-    CreateLogo(pred, f'test_logos/{motif_id}_pred.png')
-    TensorToMeme(pred, motif_id, f'test_memes/{motif_id}_pred.png')
+    CreateLogo(pred, f'test_logos/{motif_id}_pred_{nn_idp}-{modcre_idp}.png')
+    TensorToMeme(pred, motif_id, f'test_memes/{motif_id}_pred{nn_idp}-{modcre_idp}.meme')
+
+    score = JSDScore(pred, GetPWM(real_path, False)).item()
+    pvalue = GetPvalue(motif_id, real_path, f'test_memes/{motif_id}_pred.meme')
+
+    return score, pvalue
 
 def GetPvalue(motif_id, real_path, pred_path):
 '''
