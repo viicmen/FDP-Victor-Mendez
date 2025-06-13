@@ -14,7 +14,9 @@ from sklearn.model_selection import StratifiedShuffleSplit
 
 
 def TensorToMeme(pwm, pwm_id, out_file):
-    
+'''
+converts a predicted Position Weight Matrix (PWM), given as a PyTorch tensor, into the MEME motif format. 
+'''
     matrix = pwm.detach().numpy()
     f = open(out_file, 'w')
     f.write('MEME version 4\n\n')
@@ -30,6 +32,12 @@ def TensorToMeme(pwm, pwm_id, out_file):
     f.close()
 
 def CreateLogo(pwm_pred, name):
+'''
+Generates a sequence logo image from a predicted PWM tensor using the logomaker library. 
+It first converts the tensor to a NumPy array and into a DataFrame with columns for A, C, G, and T. 
+It then transforms the PWM into an information content matrix and uses this to draw the logo. 
+The resulting plot is saved as a PNG image.
+'''
     pwm_np = pwm_pred.detach().numpy()
     df = pd.DataFrame(pwm_np, columns=['A', 'C', 'G', 'T'])
     info_df = logomaker.transform_matrix(df, from_type='probability', to_type='information')
@@ -44,7 +52,12 @@ def CreateLogo(pwm_pred, name):
 
 
 class CustomDataset(Dataset):
-
+'''
+class is a PyTorch dataset implementation designed to store and manage TF input data for model training and evaluation. 
+The class stores the input tensors, the corresponding labels and subgroup identifiers, which represent different TF families or source databases. 
+The AddInput method allows new data instances to be added, including their real PWM, model inputs, and metadata. 
+The dataset supports indexing and length querying, enabling it to be used with PyTorch’s DataLoader.
+''' 
     def __init__(self):
 
         self.data = []
@@ -54,7 +67,7 @@ class CustomDataset(Dataset):
     def AddInput(self, input_id, data, pwm_real, label, db):
 
         input_tensor_nn, input_tensor_modcre, one_hot = DataLoader(data, label)
-        fam = int(f"{data['family']}_{db}")
+        fam = f"{data['family']}_{db}_{label}"
         self.data.append([input_id, input_tensor_nn, input_tensor_modcre, one_hot, pwm_real})
         self.labels.append(label)
         self.subgroups.append(fam)
@@ -62,7 +75,7 @@ class CustomDataset(Dataset):
     def __getitem__(self, idx):
 
         x = self.data[idx]
-        y = self.lebels[idx]
+        y = self.labels[idx]
 
         return x, y
 
@@ -71,7 +84,10 @@ class CustomDataset(Dataset):
         return len(self.data)
 
 def LoadCustomDataset():
-
+'''
+Loads input data and real PWMs. It reads motif identifiers from directory listings, retrieves their real PWMs from .meme files, and loads associated input features from the generated JSONL files. 
+Each example is added to an instance of CustomDataset using the AddInput method. 
+'''
     dataset = CustomDataset()
 
     for db in ['JASPAR', 'cis-bp', 'hocomoco']:
@@ -92,7 +108,11 @@ def LoadCustomDataset():
 
 
 def GetPMW(pwm_id, pad=True):
-
+'''
+Loads a PWM from a MEME-format file, returning the PWM as a nested list of nucleotide probabilities. 
+If the PWM is shorter than 30 positions, it can be padded symmetrically on both sides with uniform probabilities to create a standardized input length. 
+This padding allows all PWMs to be input into a neural network with a fixed input shape. If the PWM is missing, a default 30x4 matrix of zeros is returned.
+'''
     if pwm_id:
 
         with open(pwm_id + '.meme', 'r') as pwm:
@@ -107,8 +127,8 @@ def GetPMW(pwm_id, pad=True):
         probs = [[float(p) for p in l.strip().split()] for l in lines[i+1:]]
 
         if pad:
-            right = (40-len(probs))//2
-            left = 40-len(probs)-right
+            right = (30-len(probs))//2
+            left = 30-len(probs)-right
 
             right = [[0.25 for _ in range(4)] for _ in range(right)]
             left = [[0.25 for _ in range(4)] for _ in range(left)]
@@ -120,7 +140,11 @@ def GetPMW(pwm_id, pad=True):
     return [[0.0 for _ in range(4)] for _ in range(40)]
 
 def DataLoader(data, label):
-
+'''
+Constructs model inputs from a data dictionary and a label key ('1' or '0'). 
+It generates two input tensors, one from NN another from ModCRE motifs, and a one-hot encoded vector representing the TF family.
+These are the required input componenets for the neural network model to make predictions.
+'''
     input_tensor_nn = CreateInput(data[label]['nn']['ids'], data[label]['nn']['ipd'])
     input_tensor_modcre = CreateInput(data[label]['modcre']['ids'], data[label]['modcre']['ipd'])
     one_hot = CreateOneHot(data['family'])
@@ -128,14 +152,21 @@ def DataLoader(data, label):
     return input_tensor_nn, input_tensor_modcre, one_hot
 
 def CreateInput(pwms, idp):
-
+'''
+Takes a list of PWM file paths and a list of identity values and constructs a tensor suitable for input into a neural network. 
+Each PWM is loaded, and the identity value is appended to each position. 
+The result is a 30x5x5 tensor representing the 5 pwms at every positions plus their identity.
+'''
     pwms = [GetPMW(pwm_id) for pwm_id in pwms]
     input_tensor = torch.tensor([[pwms[i][j]+[idp[i]] for j in range(40)] for i in range(50)])
     input_tensor = input_tensor.permute(1, 0, 2)
     return input_tensor
 
 def CreateOneHot(family):
-
+'''
+Converts a TF family identifier into a one-hot encoded tensor. 
+This is a fixed-size vector in which only the position corresponding to the given family is set to 1
+'''
     one_hot = torch.zeros(1, 7)
     if family == 1: one_hot[0][0] = 1       # AP2
     elif family == 8: one_hot[0][1] = 1     # bZIP
@@ -149,10 +180,13 @@ def CreateOneHot(family):
 
 
 class FC_PWM(nn.Module):
+'''
+The Fully Connected Neural Network arquitecture as a Pytorch Module Class
+'''
     def __init__(self, fc_size, hl_size, drop_out):
         super(FC_PWM, self).__init__()
 
-        flatten_dim = 40 * 5 * 5
+        flatten_dim = 30 * 5 * 5
 
         self.fc_nn_1 = nn.Linear(flatten_dim, fc_size)
         self.fc_nn_2 = nn.Linear(fc_size, fc_size//2)
@@ -160,12 +194,12 @@ class FC_PWM(nn.Module):
         self.fc_mod_1 = nn.Linear(flatten_dim, fc_size)
         self.fc_mod_2 = nn.Linear(fc_size, fc_size//2)
 
-        self.fc_combined_1 = nn.Linear(fc_size//2 * 2 + 90, hl_size)
-        self.fc_combined_2 = nn.Linear(hl_size, 40 * 4)
+        self.fc_combined_1 = nn.Linear(fc_size//2 * 5 + 7, hl_size)
+        self.fc_combined_2 = nn.Linear(hl_size, 30 * 4)
 
         self.drop = nn.Dropout(drop_out)
 
-    def forward(self, x_nn, x_mod, one_hot, 40):
+    def forward(self, x_nn, x_mod, one_hot):
         x_nn = x_nn.reshape(1, -1)
         x_mod = x_mod.reshape(1, -1)
 
@@ -183,27 +217,30 @@ class FC_PWM(nn.Module):
         x_comb = F.relu(self.fc_combined_1(x_comb))
         x_out = F.relu(self.fc_combined_2(x_comb))
 
-        out = x_out.view(-1, 40, 4)
+        out = x_out.view(-1, 30, 4)
         out = F.softmax(out, dim=2)
         return out
 
 
 class CNN_PWM(nn.Module):
+'''
+The Convolutional Neural Network arquitecture as a Pytorch Module Class
+'''
     def __init__(self, hl_size, drop_out):
         super(CNN_PWM, self).__init__()
 
-        self.conv1_nn = nn.Conv2d(in_channels=40 out_channels=32, kernel_size=(3,3), padding=1)
+        self.conv1_nn = nn.Conv2d(in_channels=30 out_channels=32, kernel_size=(3,3), padding=1)
         self.pool1_nn = nn.MaxPool2d(kernel_size=(2,1))
         self.conv2_nn = nn.Conv2d(in_channels=32, out_channels=16, kernel_size=(5,3), padding=(2,1))
         self.pool2_nn = nn.MaxPool2d(kernel_size=(2,1))
 
-        self.conv1_mod = nn.Conv2d(in_channels=40, out_channels=32, kernel_size=(3,3), padding=1)
+        self.conv1_mod = nn.Conv2d(in_channels=30, out_channels=32, kernel_size=(3,3), padding=1)
         self.pool1_mod = nn.MaxPool2d(kernel_size=(2,1))
         self.conv2_mod = nn.Conv2d(in_channels=32, out_channels=16, kernel_size=(5,3), padding=(2,1))
         self.pool2_mod = nn.MaxPool2d(kernel_size=(2,1))
 
-        self.fc1 = nn.Linear(16 * 2 * 5 + 90, hl_size)
-        self.fc2 = nn.Linear(hl_size, 40 * 4)
+        self.fc1 = nn.Linear(16 * 2 * 5 + 7, hl_size)
+        self.fc2 = nn.Linear(hl_size, 30 * 4)
 
         self.drop = nn.Dropout(drop_out)
 
@@ -231,13 +268,16 @@ class CNN_PWM(nn.Module):
         x_fc1 = F.relu(self.fc1(x_comb))
         x_fc2 = F.relu(self.fc2(x_fc1))
 
-        out = x_fc2.view(-1, 40, 4)
+        out = x_fc2.view(-1, 30, 4)
 
         out = F.softmax(out, dim=2)
         return out
 
 def JSDScore(pwm1, pwm2):
-
+'''
+Calculates the maximum similarity between the real and the predicted PWMs using Jensen-Shannon Divergence. 
+It aligns the real across the predicted one, computes JSD at each position, and returns the highest similarity score as 1 - JSD / log(2), ensuring values range from 0 (different) to 1 (identical).
+'''
     pwm1 = pwm1 + 1e-10
     pwm2 = pwm2 + 1e-10
     L1, L2 = pwm1.size(0), pwm2.size(0)
@@ -257,14 +297,18 @@ def JSDScore(pwm1, pwm2):
     return max_score
 
 def EntropyPenalty(pwm, penalty_strength):
-    """Penalises PWMs with high entropy."""
+'''
+Penalises PWMs with high entropy.
+'''
     entropy = -torch.sum(pwm * torch.log(pwm + 1e-10), dim=-1)
     max_entropy = torch.log(torch.tensor(4.0))
     penalty = torch.mean(entropy / max_entropy)
     return penalty_strength * penalty
 
 def KLPenalty(pwm, penalty_strength):
-    """Penalises PWMs with peaks or close to a uniform distribution."""
+'''
+Penalises PWMs with peaks or close to a uniform distribution.
+'''
     uniform = torch.ones_like(pwm) / 4.0
     kl_div = torch.sum(pwm * torch.log(pwm / uniform), dim=-1)
     return penalty_strength * torch.mean(kl_div)
@@ -291,6 +335,10 @@ penalty_map  ={
 }
 
 def objective(trial):
+'''
+Defines the search space for Optuna, exploring various hyperparameters. 
+For each trial, it trains the model on a training split and computes the average loss based on the JSD between the predicted and real PWMs. 
+'''
     optimizer_name = trial.suggest_categorical('optimizer', list(opt_map.keys()))
     criterion_name = trial.suggest_categorical('criterion', list(crit_map.keys()))
     lr = trial.suggest_categorical('lr', [1e-4, 1e-3, 1e-2, 1e-1])
@@ -335,13 +383,17 @@ def objective(trial):
             total_loss += loss.item()
             total_samples += 1
 
-        avg_loss = total_loss / total_samples if total_samples else float('inf')
+        avg_loss = total_loss / total_samples
 
     return avg_loss
 
 
 def TrainEvalBestParams():
-
+'''
+Trains the model using the optimal set of hyperparameters. 
+It evaluates performance on a test split, logging scores, losses, and sequence logos for each TF. 
+It saves these outputs and stores the final trained model to disk.
+'''
     optimizer_name = 'Adam'
     criterion_name = 'MSELoss'
     lr = 0.001
@@ -426,10 +478,13 @@ def TrainEvalBestParams():
 
     return avg_train_loss, avg_eval_loss, auc
     
-def OptunaOptimization():
-
+def OptunaOptimization(trials):
+'''
+Launches the hyperparameter search using Optuna for a specified number of trials. 
+It then displays the best parameter set and lowest loss achieved, and saves a plot of the optimization history.
+'''
     study = optuna.create_study(direction="minimize")
-    study.optimize(objective, n_trials=5)
+    study.optimize(objective, n_trials=trials)
 
     print('Best value:', study.best_value)
     print('Best params:', study.best_params)
