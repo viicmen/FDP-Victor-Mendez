@@ -5,6 +5,8 @@
 import torch
 import random
 import json
+import matplotlib as plt
+import logomaker
 from GenerateTraininginputs import CreateLogo, TensorToMeme, JSDScore
 
 def CreateIDPRanges(file_path, out_json):
