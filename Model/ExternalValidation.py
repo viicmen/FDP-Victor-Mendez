@@ -6,7 +6,14 @@ import torch
 import random
 import json
 from GenerateTraininginputs import CreateLogo, TensorToMeme
+
 def CreateIDPRanges(file_path, out_json):
+'''
+The CreateIDPRanges function reads the output of an MMseqs2 search in m8 format (External Validation dataset vs. UniRef90 dataset & External Validation dataset vs. ModCRE modelling sequences)and organizes the results into a dictionary 
+where each query ID is associated with target IDs grouped by predefined percent identity ranges (e.g., "100-80", "80-60", etc.). 
+It skips self-matches and transforms the identity value from a fraction to a percentage. 
+The output is saved as a JSON file.
+'''
     id_ranges = [(100, 80), (80, 60), (60, 40), (40, 20), (20, 0)]
     result = {}
     def get_range(pident):
@@ -34,7 +41,12 @@ def CreateIDPRanges(file_path, out_json):
     return result
 
 def FindModcrePreds(pwm_dir, pident_dic, out_json):
-    
+'''
+The FindModcrePreds function associates predicted PWM files to their corresponding query-target identity matches. 
+As the ModCRE prediction files contain the input name and the ID of the modeled sequence, it scans a directory for PWM files whose names begin with the query ID and contain the target ID. 
+Using the identity-based dictionary, it creates a new nested dictionary where each motif ID maps to identity ranges that contain lists of matched PWM filenames. 
+This output is also saved as a JSON file.
+'''
     pwms = os.listdir(pwm_dir)
     new = {}
     for m, ranges in pident_dic.items():
@@ -53,7 +65,9 @@ def FindModcrePreds(pwm_dir, pident_dic, out_json):
     return new
 
 def GetPMW_Test(pwm_id):
-
+'''
+Similar to GetPWM from Training_Validation.py
+'''
     pwm_id:
 
     with open(pwm_id + '.meme', 'r') as pwm:
@@ -76,14 +90,18 @@ def GetPMW_Test(pwm_id):
     probs = left + probs + right
 
 def CreateInputs_Test(pwms, idp):
-
+'''
+Similar to CreateInputs from Training_Validation.py
+'''
     pwms = [GetPMW(random.choice(pwms)) for _ in range(5)]
     input_tensor = torch.tensor([[pwms[i][j]+[idp[i]] for j in range(40)] for i in range(50)])
     input_tensor = input_tensor.permute(1, 0, 2)
     return input_tensor
 
-def CreateOneHot(family):
-
+def CreateOneHot_Test(family):
+'''
+Similar to CreateOneHot from Training_Validation.py
+'''
     one_hot = torch.zeros(1, 7)
     if family == 'AP2': one_hot[0][0] = 1
     elif family == 'bZIP': one_hot[0][1] = 1
@@ -95,7 +113,11 @@ def CreateOneHot(family):
     return one_hot
 
 def PredictPWM(model_path, motif_id, nn_idp, nn_json, modcre_idp, modcre_json, family):
-    
+'''
+Loads a pre-trained model, reads input PWM IDs and identity ranges from two JSON files, and constructs the corresponding input tensors. 
+It also encodes the family name as a one-hot vector. 
+These inputs are passed into the model to predict a PWM, which is then saved both as a visual logo and in MEME format for downstream use.
+'''
     with open('nn_json') as f, open('modcre_json') as g:
         nn_dic = json.load(f)
         modcre_dic = json.load(g)
@@ -110,6 +132,19 @@ def PredictPWM(model_path, motif_id, nn_idp, nn_json, modcre_idp, modcre_json, f
     pred = model(input_tensor_nn, input_tensor_modcre, onehot)
     CreateLogo(pred, f'test_logos/{motif_id}_pred.png')
     TensorToMeme(pred, motif_id, f'test_memes/{motif_id}_pred.png')
+
+def GetPvalue(motif_id, real_path, pred_path):
+'''
+Executes TomTom for comparing the Real motif against the Prediction and retrieves the p-value from the output.
+'''
+    os.system(f'tomtom -thresh 1 {real_path}/{motif_id}.meme {pred_path}/{motif_id}.meme')
+
+    f = open('tomtom_out/tomtom.tsv', 'r')
+    f.readline()
+    line = f.readline().split()
+    pvalue = line[5]
+
+    return pvalue
     
     
     
