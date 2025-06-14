@@ -158,7 +158,7 @@ Each PWM is loaded, and the identity value is appended to each position.
 The result is a 30x5x5 tensor representing the 5 pwms at every positions plus their identity.
 '''
     pwms = [GetPMW(pwm_id) for pwm_id in pwms]
-    input_tensor = torch.tensor([[pwms[i][j]+[idp[i]] for j in range(40)] for i in range(50)])
+    input_tensor = torch.tensor([[pwms[i][j]+[idp[i]] for j in range(30)] for i in range(5)])
     input_tensor = input_tensor.permute(1, 0, 2)
     return input_tensor
 
