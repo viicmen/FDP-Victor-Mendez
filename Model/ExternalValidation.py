@@ -7,7 +7,7 @@ import random
 import json
 import matplotlib as plt
 import logomaker
-from GenerateTraininginputs import CreateLogo, TensorToMeme, JSDScore
+from GenerateTraininginputs import CreateLogo, TensorToMeme, JSDScore, CNN_PWM
 
 def CreateIDPRanges(file_path, out_json):
 '''
