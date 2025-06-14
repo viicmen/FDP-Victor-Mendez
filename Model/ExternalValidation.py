@@ -155,7 +155,7 @@ These inputs are passed into the model to predict a PWM, which is then saved bot
     score = JSDScore(pred, GetPWM(real_path, False)).item()
     pvalue = GetPvalue(motif_id, real_path, f'test_memes/{motif_id}_pred.meme')
 
-    return score, pvalue
+    return str(score), pvalue
     
     
     
