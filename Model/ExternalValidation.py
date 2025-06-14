@@ -99,7 +99,7 @@ def CreateInputs_Test(pwms, idp):
 Similar to CreateInputs from Training_Validation.py
 '''
     pwms = [GetPMW(random.choice(pwms)) for _ in range(5)]
-    input_tensor = torch.tensor([[pwms[i][j]+[idp[i]] for j in range(40)] for i in range(50)])
+    input_tensor = torch.tensor([[pwms[i][j]+[idp] for j in range(30)] for i in range(5)])
     input_tensor = input_tensor.permute(1, 0, 2)
     return input_tensor
 
