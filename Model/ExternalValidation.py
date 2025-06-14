@@ -117,6 +117,20 @@ Similar to CreateOneHot from Training_Validation.py
     elif family == 'Zn_clus': one_hot[0][6] = 1
     return one_hot
 
+def GetPvalue(motif_id, real_path, pred_path):
+'''
+Executes TomTom for comparing the Real motif against the Prediction and retrieves the p-value from the output.
+'''
+    os.system(f'tomtom -thresh 1 {real_path}/{motif_id}.meme {pred_path}/{motif_id}.meme')
+
+    f = open('tomtom_out/tomtom.tsv', 'r')
+    f.readline()
+    line = f.readline().split()
+    pvalue = line[5]
+
+    return pvalue
+
+
 def PredictPWM(model_path, motif_id, nn_idp, nn_json, modcre_idp, modcre_json, family, real_path):
 '''
 Loads a pre-trained model, reads input PWM IDs and identity ranges from two JSON files, and constructs the corresponding input tensors. 
@@ -142,19 +156,6 @@ These inputs are passed into the model to predict a PWM, which is then saved bot
     pvalue = GetPvalue(motif_id, real_path, f'test_memes/{motif_id}_pred.meme')
 
     return score, pvalue
-
-def GetPvalue(motif_id, real_path, pred_path):
-'''
-Executes TomTom for comparing the Real motif against the Prediction and retrieves the p-value from the output.
-'''
-    os.system(f'tomtom -thresh 1 {real_path}/{motif_id}.meme {pred_path}/{motif_id}.meme')
-
-    f = open('tomtom_out/tomtom.tsv', 'r')
-    f.readline()
-    line = f.readline().split()
-    pvalue = line[5]
-
-    return pvalue
     
     
     
