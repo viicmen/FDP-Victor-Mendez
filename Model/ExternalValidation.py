@@ -5,7 +5,7 @@
 import torch
 import random
 import json
-import matplotlib as plt
+import matplotlib.pyplot as plt
 import logomaker
 from GenerateTraininginputs import CreateLogo, TensorToMeme, JSDScore, CNN_PWM
 
