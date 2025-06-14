@@ -27,7 +27,9 @@ converts a predicted Position Weight Matrix (PWM), given as a PyTorch tensor, in
     f.write(f'letter-probability matrix: w= {str(len(matrix))}\n')
 
     for pos in matrix:
-        f.write(' '.join(pos)+'\n')
+        for n in pos:
+            f.write(str(pos)+' ')
+        f.write('\n')
     f.write('URL')
     f.close()
 
