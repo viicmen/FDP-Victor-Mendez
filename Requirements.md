@@ -1,6 +1,6 @@
 # SOFTWARE
 
-- Python (v. 3.8.6-GCCcore-10.2.0)
+- Python
 - MMseqs2
 - HMMER
 - MEME
