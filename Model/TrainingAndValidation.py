@@ -13,6 +13,20 @@ from torch.utils.data import Dataset
 from sklearn.model_selection import StratifiedShuffleSplit
 
 
+def GetPvalue(motif_id, real_path, pred_path):
+'''
+Executes TomTom for comparing the Real motif against the Prediction and retrieves the p-value from the output.
+'''
+    os.system(f'tomtom -thresh 1 {real_path}/{motif_id}.meme {pred_path}/{motif_id}.meme')
+
+    f = open('tomtom_out/tomtom.tsv', 'r')
+    f.readline()
+    line = f.readline().split()
+    pvalue = line[5]
+
+    return pvalue
+
+
 def TensorToMeme(pwm, pwm_id, out_file):
 '''
 converts a predicted Position Weight Matrix (PWM), given as a PyTorch tensor, into the MEME motif format. 
@@ -390,7 +404,7 @@ For each trial, it trains the model on a training split and computes the average
     return avg_loss
 
 
-def TrainEvalBestParams():
+def TrainEvalBestParams(pwms_dir):
 '''
 Trains the model using the optimal set of hyperparameters. 
 It evaluates performance on a test split, logging scores, losses, and sequence logos for each TF. 
@@ -471,7 +485,9 @@ It saves these outputs and stores the final trained model to disk.
                     eval_loss += loss.item()
                     eval_samples += 1
                     if input_id not in set(id_list):
-                        create_logo(pwm_pred, input_id)
+                        CreateLogo(pwm_pred, input_id)
+                        TensorToMeme(pwm_pred, input_id, 'iv_memes')
+                        GetPvalue(pwms_dir, f'{pwms_dir}/{input_id}', f'iv_memes/{input_id}')
                     id_list.append(input_id)
 
         avg_eval_loss = eval_loss / eval_samples
