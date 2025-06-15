@@ -22,7 +22,7 @@ Executes TomTom for comparing the Real motif against the Prediction and retrieve
     f = open('tomtom_out/tomtom.tsv', 'r')
     f.readline()
     line = f.readline().split()
-    pvalue = line[5]
+    pvalue = line[3]
 
     return pvalue
 
