@@ -7,7 +7,7 @@ import random
 import json
 import matplotlib.pyplot as plt
 import logomaker
-from GenerateTraininginputs import CreateLogo, TensorToMeme, JSDScore, CNN_PWM
+from GenerateTraininginputs import CreateLogo, TensorToMeme, JSDScore, CNN_PWM, GetPvalue
 
 def CreateIDPRanges(file_path, out_json):
 '''
@@ -116,19 +116,6 @@ Similar to CreateOneHot from Training_Validation.py
     elif family == 'zf-C2H2': one_hot[0][5] = 1
     elif family == 'Zn_clus': one_hot[0][6] = 1
     return one_hot
-
-def GetPvalue(motif_id, real_path, pred_path):
-'''
-Executes TomTom for comparing the Real motif against the Prediction and retrieves the p-value from the output.
-'''
-    os.system(f'tomtom -thresh 1 {real_path}/{motif_id}.meme {pred_path}/{motif_id}.meme')
-
-    f = open('tomtom_out/tomtom.tsv', 'r')
-    f.readline()
-    line = f.readline().split()
-    pvalue = line[5]
-
-    return pvalue
 
 
 def PredictPWM(model_path, motif_id, nn_idp, nn_json, modcre_idp, modcre_json, family, real_path):
