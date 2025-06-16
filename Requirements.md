@@ -30,12 +30,11 @@
 # Data
 
 ## Available to download:
-- [Hocomoco PWMs and Metadata](https://hocomoco13.autosome.org/downloads_v13)
-- [Hocomoco ](https://hocomoco13.autosome.org/downloads_v13)
+- [Hocomoco PWMs](https://hocomoco13.autosome.org/downloads_v13)
 - [Jaspar PWMs](https://jaspar.elixir.no/downloads/)
 - [Pfam HMM Domain Database](https://www.ebi.ac.uk/interpro/download/pfam/)
-- [Uniprot Database Multifasta](https://www.uniprot.org/help/downloads)
+- [Uniprot Sequences Database](https://www.uniprot.org/help/downloads)
 
 ## Not Available:
-- Jaspar Metadata
-- Cisbp PWMs and Metadata
+- Jaspar Sequences
+- Cisbp PWMs, Sequences and Metadata
